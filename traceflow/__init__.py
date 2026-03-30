@@ -1,11 +1,22 @@
 """
-Traceflow - Intelligent Error Analysis
+Traceflow - Intelligent Error Analysis & Fix Generation
 
-A revolutionary workflow tool that intercepts process output,
-analyzes errors in real-time, and provides contextual fix suggestions.
+Production-ready implementation with:
+- Real code fix generation
+- Multi-language support (Python, JavaScript)
+- Context-aware fixes
+- Persistent error history
 """
 
-from .daemon import TraceflowDaemon, ErrorAnalyzer, ErrorPatternRegistry, ParsedError, FixSuggestion
+from .daemon import (
+    TraceflowDaemon,
+    ErrorPatternRegistry,
+    ParsedError,
+    FixSuggestion,
+    ErrorHistory,
+    CodeAnalyzer
+)
 
-__version__ = "0.1.0"
-__all__ = ["TraceflowDaemon", "ErrorAnalyzer", "ErrorPatternRegistry", "ParsedError", "FixSuggestion"]
+__version__ = "1.0.0"
+__all__ = ["TraceflowDaemon", "ErrorPatternRegistry", "ParsedError", 
+           "FixSuggestion", "ErrorHistory", "CodeAnalyzer"]

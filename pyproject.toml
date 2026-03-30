@@ -4,8 +4,8 @@ build-backend = "hatchling.build"
 
 [project]
 name = "traceflow"
-version = "0.1.0"
-description = "Intelligent error analysis and fix suggestions for developers"
+version = "1.0.0"
+description = "Intelligent error analysis and fix generation for developers"
 readme = "README.md"
 requires-python = ">=3.11"
 license = {text = "MIT"}

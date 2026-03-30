@@ -1,95 +1,26 @@
 # Traceflow 🔍
 
-> **Intelligent error analysis and fix suggestions for developers**
+> **Intelligent error analysis and fix generation for developers**
 
 ---
 
-## The Old Way
+## What This Is
 
-Debugging is a **painful, time-consuming process**:
+Traceflow is a **background daemon** that monitors process output, analyzes errors in real-time, and generates code fix suggestions. It works by:
 
-1. **Run code** → See cryptic error message
-2. **Google the error** → Find Stack Overflow threads from 5 years ago
-3. **Read unrelated answers** → Try solutions that don't apply
-4. **Copy-paste fixes** → Hope it works
-5. **Repeat** → 2-3 hours per week wasted
-
-**The cost:** Developers spend **2-3 hours weekly** just reading and interpreting error messages. The context is lost, the fix is forgotten, and the same mistakes are repeated.
+1. **Pattern matching** - Recognizes common error types (SyntaxError, NameError, etc.)
+2. **Fix generation** - Creates regex-based code changes to fix the error
+3. **History tracking** - Learns from your past errors and fixes
+4. **Multi-language** - Supports Python and JavaScript/TypeScript
 
 ---
 
-## The New Paradigm
+## What This Is NOT
 
-**Traceflow is different.** It's an **intelligent error analyzer** that runs alongside your code, intercepting errors in real-time and providing contextual fix suggestions.
-
-### How It Works
-
-```bash
-$ python3 app.py
-[Traceflow] 🔍 Detected: ImportError
-   Message: No module named 'nonexistent_module_xyz'
-   Pattern: ImportError
-   Suggestions:
-     1. Install the required package: pip install <package> (confidence: 70%)
-     2. Check if the package name is correct (confidence: 50%)
-     3. Verify Python version compatibility (confidence: 50%)
-```
-
-**No Google. No Stack Overflow. Just fixes.**
-
----
-
-## Under the Hood
-
-### Architecture
-
-```
-┌─────────────────────────────────────────────────────────┐
-│                   Traceflow Daemon                       │
-├─────────────────────────────────────────────────────────┤
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐  │
-│  │ Process      │  │  Error       │  │  Fix         │  │
-│  │ Monitor      │─▶│ Analyzer     │─▶│ Suggestion   │  │
-│  │ (subprocess) │  │ (pattern     │  │  Engine      │  │
-│  └──────────────┘  │ matching)    │  └──────────────┘  │
-│                     └──────────────┘                    │
-└─────────────────────────────────────────────────────────┘
-```
-
-### Key Technologies
-
-- **regex** - Advanced pattern matching for error detection
-- **rich** - Beautiful terminal output
-- **asyncio** - Non-blocking process monitoring
-- **anyio** - Cross-platform async primitives
-
-### Error Pattern Matching
-
-Traceflow uses a **registry of known error patterns** with pre-built fix suggestions:
-
-- Python syntax errors
-- Import errors
-- File not found errors
-- Database errors
-- Network connection errors
-- And 20+ more...
-
-### Extensible Pattern System
-
-Add your own error patterns:
-
-```python
-from traceflow import ErrorPatternRegistry
-
-registry = ErrorPatternRegistry()
-registry.patterns.append(ErrorPattern(
-    name="CustomError",
-    pattern=regex.compile(r"MyCustomError:\s*(.+)"),
-    severity="error",
-    description="My custom error",
-    fix_suggestions=["Fix your custom logic"]
-))
-```
+- ❌ **Not AI-powered** - No LLM or machine learning
+- ❌ **Not magic** - Fixes are template-based, not context-aware
+- ❌ **Not perfect** - Generated fixes require review
+- ❌ **Not a debugger** - Doesn't step through code or set breakpoints
 
 ---
 
@@ -122,58 +53,249 @@ Monitors the current directory and analyzes errors from running commands.
 ### As a Library
 
 ```python
-from traceflow import TraceflowDaemon
+from traceflow import TraceflowDaemon, FixSuggestion
 
-daemon = TraceflowDaemon(codebase_path="./src")
+daemon = TraceflowDaemon()
 
-def on_error(error, pattern, suggestions):
+# Analyze an error
+pattern, suggestions = daemon.analyze_error("NameError: name 'undefined' is not defined")
+
+for suggestion in suggestions:
+    print(f"Suggestion: {suggestion.description}")
+    print(f"Confidence: {suggestion.confidence}")
+    
+    # Apply the fix (if you trust it)
+    if suggestion.confidence > 0.7:
+        success = suggestion.apply_to_file("app.py")
+        print(f"Applied: {success}")
+```
+
+### Monitoring a Process
+
+```python
+daemon = TraceflowDaemon()
+
+def on_error(error, suggestions):
     print(f"Error: {error.message}")
-    for suggestion in suggestions:
-        print(f"  → {suggestion.description}")
+    for s in suggestions:
+        print(f"  → {s.description}")
 
 daemon.register_suggestion_callback(on_error)
-daemon.run_command(["python3", "app.py"])
+
+# Run a command and monitor for errors
+daemon.run_command(["python3", "app.py"], language="python")
 ```
+
+---
+
+## API Reference
+
+### TraceflowDaemon
+
+```python
+from traceflow import TraceflowDaemon
+
+daemon = TraceflowDaemon()
+
+# Analyze an error message
+pattern, suggestions = daemon.analyze_error("FileNotFoundError: [Errno 2]...", language="python")
+
+# Suggest fixes for a parsed error
+from traceflow import ParsedError
+error = ParsedError(
+    raw_output="NameError: name 'x' is not defined",
+    error_type="NameError",
+    message="name 'x' is not defined",
+    file_path="app.py"
+)
+suggestions = daemon.suggest_fix(error)
+
+# Run and monitor a command
+daemon.run_command(["python3", "app.py"], language="python")
+
+# Get error history
+history = daemon.get_error_history(limit=20)
+```
+
+### FixSuggestion
+
+```python
+from traceflow import FixSuggestion
+
+suggestion = FixSuggestion(
+    description="Add missing import",
+    code_change="import missing_module",
+    before_pattern=r"^import",
+    after_replacement=r"import missing_module\nimport",
+    confidence=0.8,
+    explanation="Pattern: ImportError",
+    requires_review=True
+)
+
+# Apply the fix to a file
+success = suggestion.apply_to_file("app.py")
+```
+
+### ErrorPatternRegistry
+
+```python
+from traceflow import ErrorPatternRegistry
+
+registry = ErrorPatternRegistry()
+
+# Find matching pattern
+pattern = registry.find_matching_pattern("SyntaxError: invalid syntax", "python")
+
+# Get all patterns
+for p in registry.patterns:
+    print(f"{p.name}: {p.description}")
+```
+
+---
+
+## Supported Error Patterns
+
+### Python
+
+- SyntaxError (missing colons, indentation issues)
+- NameError (undefined variables)
+- FileNotFoundError (missing files)
+- ImportError (missing modules)
+- AttributeError (missing attributes)
+- KeyError (missing dictionary keys)
+- IndexError (list index out of range)
+- TypeError (invalid type operations)
+- ConnectionError (network issues)
+- DatabaseError (SQL errors)
+
+### JavaScript/TypeScript
+
+- ReferenceError (undefined variables)
+- TypeError (type operations)
+- SyntaxError (syntax issues)
+
+---
+
+## How It Works
+
+### Pattern Matching
+
+Traceflow uses regex patterns to recognize errors:
+
+```python
+# Example: NameError pattern
+pattern = regex.compile(
+    r"NameError:\s*name\s+'?(\w+)'?\s+is\s+not\s+defined",
+    regex.IGNORECASE
+)
+```
+
+### Fix Generation
+
+Fixes are regex-based code transformations:
+
+```python
+fix = {
+    "description": "Use .get() with default",
+    "before_pattern": r"(\w+)\['(\w+)'\]",
+    "after_replacement": r"\1.get('\2', None)"
+}
+```
+
+### History Tracking
+
+Errors and fixes are stored in SQLite at `~/.config/traceflow/traceflow.db`:
+
+```sql
+CREATE TABLE errors (
+    id INTEGER PRIMARY KEY,
+    raw_output TEXT,
+    error_type TEXT,
+    message TEXT,
+    pattern_matched TEXT,
+    timestamp REAL
+);
+
+CREATE TABLE fixes (
+    id INTEGER PRIMARY KEY,
+    error_id INTEGER,
+    fix_description TEXT,
+    code_change TEXT,
+    applied BOOLEAN,
+    timestamp REAL
+);
+```
+
+---
+
+## Limitations
+
+### What Works Well
+
+- ✅ Pattern-based error recognition
+- ✅ Fast regex-based fix generation
+- ✅ Persistent error history
+- ✅ Multi-language support (Python, JS/TS)
+- ✅ Confidence scoring for fixes
+
+### What Doesn't Work
+
+- ❌ **No semantic understanding** - Can't understand code intent
+- ❌ **No project context** - Doesn't know your codebase structure
+- ❌ **Template-based fixes** - May not work for complex cases
+- ❌ **No IDE integration** - Terminal only
+- ❌ **No learning** - Doesn't improve over time
 
 ---
 
 ## Proof of Concept
 
-See `simulate_debugger.py` for a complete integration test that simulates debugging scenarios.
+Run the integration test:
 
 ```bash
 python simulate_debugger.py
 ```
 
+This tests:
+- Error pattern recognition
+- Fix suggestion generation
+- Error history tracking
+- Multi-language support
+
 ---
 
-## Why This Matters
+## Honest Assessment
 
-**Traceflow is not a debugger. It's a debugging assistant.**
+This tool is **functional but limited**:
 
-- **Ambient Intelligence** - Analyzes errors as they happen
-- **Context-Aware** - Understands your codebase structure
-- **Learning System** - Builds knowledge of common errors
-- **Fix-First** - Provides actionable solutions, not just descriptions
+1. **Pattern matching works** - It recognizes the 11+ built-in error patterns
+2. **Fix generation works** - It creates regex replacements
+3. **But...** - The fixes are generic templates, not context-aware
 
-This is the first tool that **understands your errors** rather than just displaying them.
+**Example:**
+
+```python
+# Error: KeyError: 'missing_key'
+# Traceflow suggests: dict.get('missing_key', None)
+# This works for simple cases, but not if you need special logic
+```
+
+**The fixes require review.** Don't blindly apply them.
+
+---
+
+## Future Possibilities
+
+If you want to extend this:
+
+1. **Add more patterns** - Support more error types
+2. **Add project context** - Know your codebase structure
+3. **Add AI** - Use an LLM for smarter fixes
+4. **Add IDE plugin** - VSCode extension
+5. **Add user feedback** - Learn which fixes work
 
 ---
 
 ## License
 
 MIT - Open source, free for personal and commercial use.
-
----
-
-## The Future
-
-This is just the beginning. Next iterations will add:
-
-- AI-powered error analysis (LLM integration)
-- Cross-language support (JavaScript, Go, Rust)
-- IDE plugin integration (VSCode, JetBrains)
-- Error history and trend analysis
-- Automated fix application
-
-**The goal:** Eliminate the pain of debugging entirely.
